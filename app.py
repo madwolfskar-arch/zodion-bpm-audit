@@ -1,134 +1,220 @@
 ﻿import streamlit as st
-import pandas as pd
 from datetime import datetime
+from io import BytesIO
 
-# Configuración de página para entorno Cloud
-st.set_page_config(
-    page_title="Zodion - Auditoría BPM Pro",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# PDF
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
 
-# Estética Corporativa Zodion
+# =====================================
+# CONFIGURACIÓN
+# =====================================
+st.set_page_config(page_title="Zodion - Auditoría Pro", page_icon="🛡️", layout="wide")
+
 st.markdown("""
-    <style>
-    .report-card {
-        background-color: #ffffff;
-        padding: 25px;
-        border-radius: 12px;
-        border-left: 10px solid #003366;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        margin-top: 20px;
-    }
-    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #f0f2f6;
-        border-radius: 5px 5px 0px 0px;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+.stDownloadButton { text-align: center; margin-top: 20px; }
+.stDownloadButton button {
+    background-color: #28a745 !important;
+    color: white !important;
+    width: 100% !important;
+    height: 4em !important;
+    font-size: 1.1em !important;
+    border-radius: 10px !important;
+}
+.report-frame {
+    background-color: #ffffff;
+    padding: 40px;
+    border: 2px solid #003366;
+    border-radius: 10px;
+    font-family: 'Courier New', monospace;
+}
+</style>
+""", unsafe_allow_html=True)
 
-st.title("🛡️ Sistema de Gestión y Diagnóstico ZODION")
+st.title("🛡️ Sistema de Diagnóstico Técnico ZODION")
 
-# Sidebar - Datos de Auditoría
+# =====================================
+# SIDEBAR
+# =====================================
 with st.sidebar:
-    st.header("📋 Información del Servicio")
-    cliente = st.text_input("Establecimiento / Cliente", placeholder="Ej. Planta de Procesamiento X")
+    st.header("📋 Identificación")
+    cliente = st.text_input("Establecimiento", value="JAVERIANO")
     fecha = st.date_input("Fecha de Inspección", datetime.now())
     auditor = st.text_input("Auditor Responsable", value="CEO Zodion")
-    st.divider()
-    st.info("Basado en los requisitos de la Resolución 2674 de 2013.")
 
-# Pestañas de Auditoría
-tab1, tab2, tab3, tab4 = st.tabs(["🏗️ Infraestructura", "📦 Almacenamiento", "🪳 Control MIP", "📸 Evidencias"])
+# =====================================
+# TABS
+# =====================================
+tab1, tab2, tab3 = st.tabs(["🏗️ Infraestructura/Equipos", "📦 Alimentos", "🪳 Control MIP"])
 
 with tab1:
-    st.subheader("Análisis de Edificación e Instalaciones")
-    col1, col2 = st.columns(2)
-    with col1:
-        ins_localizacion = st.selectbox("Localización y accesos:", ["Cumple", "Cumple Parcialmente", "No Cumple"])
-        ins_diseno = st.selectbox("Diseño y construcción sanitaria:", ["Cumple", "Cumple Parcialmente", "No Cumple"])
-    with col2:
-        hallazgos_infra = st.text_area("Hallazgos específicos (Art. 6 - 9):")
+    infra_res = st.selectbox("Infraestructura (Art. 6):", ["Cumple", "Cumple Parcialmente", "No Cumple"])
+    equ_res = st.selectbox("Equipos (Art. 10):", ["Cumple", "No Cumple"])
+    infra_det = st.text_area("Análisis Instalaciones:", "Diseño sanitario adecuado.")
 
 with tab2:
-    st.subheader("Gestión de Productos y Caducidad")
-    c1, c2 = st.columns(2)
-    with c1:
-        prod_vencidos = st.radio("¿Se detectaron productos con FECHA DE CADUCIDAD VENCIDA?", ["No", "Sí"], help="Incumplimiento grave del Art. 16")
-        prod_rotulado = st.radio("¿El rotulado cumple con la normativa vigente?", ["Sí", "No"])
-    with c2:
-        almacenamiento = st.radio("¿Separación adecuada de productos (evita contaminación)?", ["Sí", "No"])
-        detalles_caducidad = st.text_area("Análisis detallado de productos (Lotes/Fechas):")
+    vencidos = st.radio("¿Productos vencidos?", ["No", "Sí"])
+    empaques = st.radio("¿Empaques conformes?", ["Sí", "No"])
+    prod_det = st.text_area("Análisis Detallado:", "Condiciones adecuadas.")
 
 with tab3:
-    st.subheader("Manejo Integral de Plagas (Sello Zodion)")
-    p1 = st.checkbox("Programa MIP documentado y actualizado")
-    p2 = st.checkbox("Registros de aplicación y fichas técnicas")
-    obs_pest = st.text_area("Observaciones del control preventivo:")
+    mip_doc = st.checkbox("Programa MIP Documentado")
+    mip_det = st.text_area("Observaciones MIP:", "Sin actividad detectable.")
 
-with tab4:
-    st.subheader("Registro Fotográfico")
-    fotos = st.file_uploader("Subir evidencias (JPG/PNG)", accept_multiple_files=True)
-    if fotos:
-        st.success(f"{len(fotos)} imágenes listas para el reporte.")
+# =====================================
+# FUNCIÓN PDF
+# =====================================
+def generar_pdf(cliente, fecha, auditor, diagnostico, riesgo, prod_det, mip_doc, mip_det, recomendaciones):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
 
-# Generación del Informe Diagnóstico
+    contenido = []
+
+    # LOGO
+    try:
+        logo = Image("logo_zodion.png", width=120, height=60)
+        contenido.append(logo)
+    except:
+        pass
+
+    contenido.append(Spacer(1, 10))
+
+    contenido.append(Paragraph("<b>INFORME TÉCNICO PROFESIONAL</b>", styles["Title"]))
+    contenido.append(Spacer(1, 12))
+
+    contenido.append(Paragraph(f"""
+    <b>Cliente:</b> {cliente}<br/>
+    <b>Fecha:</b> {fecha}<br/>
+    <b>Auditor:</b> {auditor}<br/>
+    <b>Ubicación:</b> Pasto - Nariño - Colombia<br/>
+    <b>Normativa:</b> Resolución 2674 de 2013
+    """, styles["Normal"]))
+
+    contenido.append(Spacer(1, 12))
+
+    contenido.append(Paragraph("<b>1. DIAGNÓSTICO SANITARIO</b>", styles["Heading2"]))
+    contenido.append(Paragraph(diagnostico, styles["Normal"]))
+    contenido.append(Paragraph(f"<b>Nivel de Riesgo:</b> {riesgo}", styles["Normal"]))
+
+    contenido.append(Spacer(1, 12))
+
+    contenido.append(Paragraph("<b>2. ANÁLISIS DETALLADO</b>", styles["Heading2"]))
+    contenido.append(Paragraph(prod_det, styles["Normal"]))
+
+    contenido.append(Spacer(1, 12))
+
+    contenido.append(Paragraph("<b>3. MANEJO INTEGRAL DE PLAGAS</b>", styles["Heading2"]))
+    contenido.append(Paragraph(f"Estado: {'Implementado' if mip_doc else 'No implementado'}", styles["Normal"]))
+    contenido.append(Paragraph(mip_det, styles["Normal"]))
+
+    contenido.append(Spacer(1, 12))
+
+    contenido.append(Paragraph("<b>4. PLAN DE MEJORA</b>", styles["Heading2"]))
+    contenido.append(Paragraph(recomendaciones.replace("\n", "<br/>"), styles["Normal"]))
+
+    contenido.append(Spacer(1, 20))
+
+    contenido.append(Paragraph("""
+    <b>ZODION SERVICIOS AMBIENTALES COLOMBIA</b><br/>
+    Manejo Integral Ambiental (MIA)<br/>
+    Modalidad: Freelance & Outsourcing Ambiental
+    """, styles["Normal"]))
+
+    doc.build(contenido)
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
+
+# =====================================
+# PROCESAMIENTO
+# =====================================
 st.divider()
-if st.button("🚀 GENERAR DIAGNÓSTICO TÉCNICO E INFORME"):
+
+if st.button("🚀 PROCESAR ANÁLISIS FINAL"):
     if not cliente:
-        st.error("Error: Por favor identifique al establecimiento.")
+        st.error("Ingrese el establecimiento.")
     else:
-        st.balloons()
-        st.markdown(f"<div class='report-card'>", unsafe_allow_html=True)
-        st.header(f"DIAGNÓSTICO TÉCNICO - {cliente.upper()}")
-        st.write(f"**Fecha:** {fecha} | **Auditor:** {auditor}")
-        
-        # 1. Fundamentación
-        st.markdown("### 📜 1. Fundamentación Normativa")
-        st.write("Evaluación realizada bajo los estándares de la **Resolución 2674 de 2013**, sobre requisitos sanitarios en la manipulación de alimentos.")
+        st.success("✅ Análisis realizado con éxito")
 
-        # 2. Análisis de Hallazgos
-        st.markdown("### 🔬 2. Análisis de Hallazgos")
-        col_res1, col_res2 = st.columns(2)
-        
-        with col_res1:
-            st.write("**Estado de Almacenamiento:**")
-            if prod_vencidos == "Sí":
-                st.error("❗ ALERTA: Se hallaron productos con fecha de caducidad vencida. Riesgo sanitario alto.")
-            else:
-                st.success("✅ Control de caducidades conforme a la normativa.")
-        
-        with col_res2:
-            st.write("**Estado de Infraestructura:**")
-            if ins_localizacion == "No Cumple":
-                st.warning("⚠️ El establecimiento presenta riesgos por localización o accesos.")
-            else:
-                st.success("✅ Infraestructura cumple con protección básica.")
+        # RIESGO
+        riesgo = "BAJO"
+        if infra_res == "No Cumple" or vencidos == "Sí":
+            riesgo = "ALTO"
+        elif infra_res == "Cumple Parcialmente" or empaques == "No":
+            riesgo = "MEDIO"
 
-        # 3. Sugerencias y Plan de Acción
-        st.markdown("### 💡 3. Sugerencias y Plan de Mejora")
-        sug = []
-        if prod_vencidos == "Sí":
-            sug.append("- Implementar de inmediato el sistema **PEPS** (Primero en Entrar, Primero en Salir).")
-            sug.append("- Realizar auditoría de inventario semanal de fechas críticas.")
-        if almacenamiento == "No":
-            sug.append("- Reorganizar el almacenamiento para evitar contaminación cruzada (Separación mínima 60cm).")
-        if not p1:
-            sug.append("- Formalizar el Programa MIP bajo estándares de control biológico Zodion.")
-        
-        if sug:
-            for s in sug: st.write(s)
-        else:
-            st.write("Mantener los estándares actuales y realizar seguimiento preventivo.")
-            
-        st.markdown("</div>", unsafe_allow_html=True)
+        # DIAGNÓSTICO
+        diagnostico = f"""
+Nivel de riesgo sanitario {riesgo} conforme a Resolución 2674 de 2013.
+
+Infraestructura: {infra_res}. {infra_det}
+Equipos: {equ_res}.
+Alimentos: {"Productos vencidos detectados (riesgo crítico)." if vencidos == "Sí" else "Sin vencimientos detectados."}
+Empaques: {"No conformes." if empaques == "No" else "Conformes."}
+MIP: {"Implementado." if mip_doc else "No documentado."}
+"""
+
+        # RECOMENDACIONES
+        recomendaciones = ""
+
+        if vencidos == "Sí":
+            recomendaciones += "- Aplicar sistema PEPS inmediatamente.\n"
+        if infra_res != "Cumple":
+            recomendaciones += "- Adecuaciones según Art. 6.\n"
+        if empaques == "No":
+            recomendaciones += "- Corregir rotulado/empaque.\n"
+        if not mip_doc:
+            recomendaciones += "- Implementar programa MIP.\n"
+        if recomendaciones == "":
+            recomendaciones = "- Mantener condiciones actuales.\n"
+
+        # INFORME TXT
+        informe_txt = f"""
+INFORME ZODION
+
+Cliente: {cliente}
+Fecha: {fecha}
+Auditor: {auditor}
+
+Diagnóstico:
+{diagnostico}
+
+Recomendaciones:
+{recomendaciones}
+"""
+
+        # MOSTRAR
+        st.markdown('<div class="report-frame">', unsafe_allow_html=True)
+        st.text(informe_txt)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # PDF
+        pdf_file = generar_pdf(
+            cliente, fecha, auditor,
+            diagnostico, riesgo,
+            prod_det, mip_doc,
+            mip_det, recomendaciones
+        )
+
+        # DESCARGAS
+        st.download_button(
+            "📥 Descargar TXT",
+            data=informe_txt,
+            file_name=f"Informe_{cliente}.txt"
+        )
+
+        st.download_button(
+            "📄 Descargar PDF Profesional",
+            data=pdf_file,
+            file_name=f"Informe_{cliente}.pdf",
+            mime="application/pdf"
+        )
+
+
+
         
 
 
