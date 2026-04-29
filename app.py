@@ -57,26 +57,23 @@ with tab1:
                 st.image(foto, use_container_width=True)
             with col_txt:
                 titulo_foto = st.text_input(f"Título de Evidencia {i+1}:", placeholder="Ej: Refrigeración/Lácteos", key=f"tit_{i}")
-                desc_foto = st.text_area(f"Análisis Técnico de Evidenci {i+1}:", key=f"desc_{i}")
+                desc_foto = st.text_area(f"Análisis Técnico de Evidencia {i+1}:", key=f"desc_{i}")
                 analisis_fotos.append(f"Evidencia {i+1} ({titulo_foto}): {desc_foto}")
 
 with tab2:
     st.subheader("2. Evaluación Técnica por Elementos")
     
-    # A. Segregación
     st.markdown("### A. SEGREGACIÓN Y DISPOSICIÓN (Art. 16, 27)")
     diag_seg = st.selectbox("Diagnóstico Segregación:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], key="diag_seg")
-    analisis_seg = st.text_area("Análisis Segregación:", "Según la normativa, los alimentos deben almacenarse según su naturaleza...")
+    analisis_seg = st.text_area("Análisis Segregación:", "Según la normativa, los alimentos deben almacenarse según su naturaleza para evitar la contaminación cruzada...")
 
-    # B. Trazabilidad
     st.markdown("### B. TRAZABILIDAD Y CADUCIDAD (Art. 16)")
     diag_tra = st.selectbox("Diagnóstico Trazabilidad:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], key="diag_tra")
-    analisis_tra = st.text_area("Análisis Trazabilidad:", "Los productos cuentan con rotulado de fábrica...")
+    analisis_tra = st.text_area("Análisis Trazabilidad:", "Los productos cuentan con rotulado de fábrica. Se evidencia la necesidad de etiquetas internas...")
 
-    # C. Equipos
     st.markdown("### C. EQUIPOS Y UTENSILIOS (Art. 10-13)")
     diag_equ = st.selectbox("Diagnóstico Equipos:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], key="diag_equ")
-    analisis_equ = st.text_area("Análisis Equipos:", "Las superficies internas de los equipos parecen ser de material inerte...")
+    analisis_equ = st.text_area("Análisis Equipos:", "Las superficies internas cumplen con material inerte. Se recomienda limpieza profunda en juntas...")
 
 with tab3:
     st.subheader("3. Diagnóstico MIP y 4. Recomendaciones")
@@ -93,37 +90,61 @@ if st.button("🚀 GENERAR INFORME TÉCNICO PROFESIONAL"):
     
     txt_fotos = "\n".join(analisis_fotos) if analisis_fotos else "Sin evidencias registradas."
     
-    # Formato de presentación exacto solicitado
-    informe_final = f"""INFORME TÉCNICO DE AUDITORÍA Y DIAGNÓSTICO PROFESIONAL
-ZODION SERVICIOS AMBIENTALES
+    # Construcción segura del string para evitar SyntaxError
+    cuerpo_informe = (
+        f"INFORME TÉCNICO DE AUDITORÍA Y DIAGNÓSTICO PROFESIONAL\n"
+        f"ZODION SERVICIOS AMBIENTALES\n\n"
+        f"ESTABLECIMIENTO: {cliente.upper()}\n"
+        f"FECHA: {fecha_auditoria.strftime('%d de %B de %Y')}\n"
+        f"AUDITOR: {auditor}\n"
+        f"SISTEMA DE REFERENCIA: Resolución 2674 de 2013 (Colombia)\n\n"
+        f"------------------------------------------------------------\n"
+        f"1. ANÁLISIS DETALLADO DE EVIDENCIA FOTOGRÁFICA\n"
+        f"------------------------------------------------------------\n"
+        f"{txt_fotos}\n\n"
+        f"------------------------------------------------------------\n"
+        f"2. EVALUACIÓN TÉCNICA POR ELEMENTOS\n"
+        f"------------------------------------------------------------\n"
+        f"A. SEGREGACIÓN Y DISPOSICIÓN (Art. 16, 27)\n"
+        f"Diagnóstico: {diag_seg}\n"
+        f"Análisis: {analisis_seg}\n\n"
+        f"B. TRAZABILIDAD Y CADUCIDAD (Art. 16)\n"
+        f"Diagnóstico: {diag_tra}\n"
+        f"Análisis: {analisis_tra}\n\n"
+        f"C. EQUIPOS Y UTENSILIOS (Art. 10-13)\n"
+        f"Diagnóstico: {diag_equ}\n"
+        f"Análisis: {analisis_equ}\n\n"
+        f"------------------------------------------------------------\n"
+        f"3. DIAGNÓSTICO DEL MANEJO INTEGRAL DE PLAGAS (MIP)\n"
+        f"------------------------------------------------------------\n"
+        f"Nivel de Riesgo: {riesgo_mip}.\n"
+        f"Evaluación: {eval_mip}\n\n"
+        f"------------------------------------------------------------\n"
+        f"4. RECOMENDACIONES Y PLAN DE ACCIÓN\n"
+        f"------------------------------------------------------------\n"
+        f"{plan_accion}\n\n"
+        f"------------------------------------------------------------\n"
+        f"JUNTOS LO HACEMOS POSIBLE.\n"
+        f"ZODION - PASTO, NARIÑO.\n"
+        f"============================================================"
+    )
 
-ESTABLECIMIENTO: {cliente.upper()}
-FECHA: {fecha_auditoria.strftime('%d de %B de %Y')}
-AUDITOR: {auditor}
-SISTEMA DE REFERENCIA: Resolución 2674 de 2013 (Colombia)
+    st.session_state.informe_final = cuerpo_informe
+    st.info("✅ Informe estructurado exitosamente.")
 
-------------------------------------------------------------
-1. ANÁLISIS DETALLADO DE EVIDENCIA FOTOGRÁFICA
-------------------------------------------------------------
-{txt_fotos}
+# 5. Visualización y Descarga Word
+if st.session_state.informe_final:
+    st.markdown('<div class="report-preview">', unsafe_allow_html=True)
+    st.text(st.session_state.informe_final)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.download_button(
+        label="📥 DESCARGAR INFORME EN FORMATO WORD (.DOC)",
+        data=st.session_state.informe_final,
+        file_name=f"Informe_Tecnico_Zodion_{cliente}.doc",
+        mime="application/msword"
+    )
 
-------------------------------------------------------------
-2. EVALUACIÓN TÉCNICA POR ELEMENTOS
-------------------------------------------------------------
-A. SEGREGACIÓN Y DISPOSICIÓN (Art. 16, 27)
-Diagnóstico: {diag_seg}
-Análisis: {analisis_seg}
-
-B. TRAZABILIDAD Y CADUCIDAD (Art. 16)
-Diagnóstico: {diag_tra}
-Análisis: {analisis_tra}
-
-C. EQUIPOS Y UTENSILIOS (Art. 10-13)
-Diagnóstico: {diag_equ}
-Análisis: {analisis_equ}
-
-------------------------------------------------------------
-3. DIAGNÓSTICO
 
 
 
