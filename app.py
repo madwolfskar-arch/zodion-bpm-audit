@@ -13,13 +13,14 @@ model = None
 if "GOOGLE_API_KEY" in st.secrets:
     try:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+        # Usamos flash por su velocidad y compatibilidad con visión
         model = genai.GenerativeModel('gemini-1.5-flash')
     except Exception as e:
         st.error(f"Error al configurar Google AI: {e}")
 else:
     st.warning("⚠️ Configuración pendiente: Agrega 'GOOGLE_API_KEY' en los Secrets de Streamlit.")
 
-# Estilo CSS personalizado
+# Estilo CSS personalizado para el branding de Zodion
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -29,6 +30,7 @@ st.markdown("""
         width: 100% !important;
         font-weight: bold !important;
         border-radius: 8px !important;
+        height: 3em !important;
     }
     .report-preview {
         background-color: #ffffff;
@@ -38,13 +40,15 @@ st.markdown("""
         font-family: 'Courier New', Courier, monospace;
         color: #000;
         white-space: pre-wrap;
+        margin-bottom: 20px;
     }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("🛡️ Sistema de Diagnóstico Técnico ZODION")
-st.caption("CEO de Zodion - Innovación en Saneamiento Ecológico y Ambiental")
+st.caption("CEO de Zodion - Innovación en Saneamiento Ecológico y Ambiental - Pasto, Nariño")
 
+# Inicialización de estados de sesión
 if 'informe_final' not in st.session_state:
     st.session_state.informe_final = ""
 
@@ -59,13 +63,14 @@ with st.sidebar:
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
+    st.caption("Juntos lo hacemos posible")
 
 # 3. MÓDULOS DE INSPECCIÓN
 tab1, tab2, tab3 = st.tabs(["📸 IA Vision: Análisis", "🔍 Evaluación Normativa", "📝 Reporte Final"])
 
 with tab1:
-    st.subheader("1. Análisis Detallado de Evidencias (IA)")
-    fotos = st.file_uploader("Subir fotos de inspección", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+    st.subheader("1. Análisis Detallado de Evidencias (IA Vision)")
+    fotos = st.file_uploader("Subir fotos de inspección (Pan, lácteos, equipos, etc.)", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
     
     analisis_fotos = []
     if fotos:
@@ -73,76 +78,123 @@ with tab1:
             col_img, col_txt = st.columns([1, 2])
             with col_img:
                 st.image(foto, use_container_width=True)
+                
+                # Botón de análisis con IA corregido
                 if st.button(f"🪄 Analizar Evidencia {i+1}", key=f"btn_{i}"):
                     if model:
-                        with st.spinner("Zodion AI analizando..."):
-                            img = Image.open(foto)
-                            prompt = "Analiza esta imagen para una auditoría de inocuidad alimentaria en Colombia (Res 2674). Identifica el objeto y describe hallazgos técnicos o riesgos sanitarios brevemente."
-                            response = model.generate_content([prompt, img])
-                            st.session_state[f"desc_{i}"] = response.text
+                        with st.spinner("Zodion AI analizando imagen..."):
+                            try:
+                                # PROCESAMIENTO DE IMAGEN PARA EVITAR INVALIDARGUMENT
+                                img_raw = Image.open(foto)
+                                # Convertimos a RGB para eliminar canales alfa (transparencia) que causan error
+                                img_rgb = img_raw.convert('RGB')
+                                
+                                prompt = (
+                                    "Actúa como un auditor experto en inocuidad alimentaria bajo la Res. 2674 de Colombia. "
+                                    "Analiza esta imagen y describe: 1. Qué objeto o material es. 2. Estado sanitario visible. "
+                                    "3. Riesgos asociados (plagas o contaminación). Sé técnico y breve."
+                                )
+                                
+                                # Llamada a la API
+                                response = model.generate_content([prompt, img_rgb])
+                                st.session_state[f"desc_{i}"] = response.text
+                            except Exception as e:
+                                st.error(f"Error técnico en el análisis: {str(e)}")
                     else:
-                        st.error("IA no configurada. Revisa los Secrets.")
+                        st.error("IA no disponible. Verifica la API Key en Secrets.")
 
             with col_txt:
-                titulo = st.text_input(f"Título {i+1}:", value=f"Evidencia {i+1}", key=f"tit_{i}")
-                desc_ia = st.text_area(f"Análisis Técnico:", value=st.session_state.get(f"desc_{i}", ""), key=f"txt_{i}", height=150)
-                analisis_fotos.append(f"{titulo.upper()}:\n{desc_ia}")
+                titulo = st.text_input(f"Título de la Evidencia {i+1}:", value=f"Evidencia {i+1}", key=f"tit_{i}")
+                # El área de texto recupera lo que la IA escribió o permite edición manual
+                desc_final = st.text_area(f"Análisis Técnico de Evidencia {i+1}:", 
+                                         value=st.session_state.get(f"desc_{i}", ""), 
+                                         key=f"txt_{i}", height=150)
+                analisis_fotos.append(f"{titulo.upper()}:\n{desc_final}")
 
 with tab2:
-    st.subheader("2. Evaluación Técnica por Elementos")
+    st.subheader("2. Evaluación Técnica Normativa")
     col1, col2 = st.columns(2)
     
     with col1:
-        diag_seg = st.selectbox("Segregación (Art. 16, 27):", ["CONFORME", "CUMPLE PARCIALMENTE", "NO CONFORME"], index=0)
-        obs_seg = st.text_area("Análisis Segregación:", placeholder="Describa hallazgos...")
+        st.markdown("### A. SEGREGACIÓN Y DISPOSICIÓN")
+        diag_seg = st.selectbox("Diagnóstico Segregación:", ["CONFORME", "CUMPLE PARCIALMENTE", "NO CONFORME"], index=0, key="sel_seg")
+        obs_seg = st.text_area("Observaciones Segregación:", placeholder="Describa hallazgos sobre contaminación cruzada...", key="obs_seg")
 
-        diag_tra = st.selectbox("Trazabilidad (Art. 16):", ["CONFORME", "CUMPLE PARCIALMENTE", "NO CONFORME"], index=0)
-        obs_tra = st.text_area("Análisis Trazabilidad:", placeholder="Describa rotulado...")
+        st.markdown("### B. TRAZABILIDAD Y CADUCIDAD")
+        diag_tra = st.selectbox("Diagnóstico Trazabilidad:", ["CONFORME", "CUMPLE PARCIALMENTE", "NO CONFORME"], index=0, key="sel_tra")
+        obs_tra = st.text_area("Observaciones Trazabilidad:", placeholder="Describa hallazgos sobre rotulado y fechas...", key="obs_tra")
 
     with col2:
-        diag_equ = st.selectbox("Equipos (Art. 10-13):", ["CONFORME", "CUMPLE PARCIALMENTE", "NO CONFORME"], index=0)
-        obs_equ = st.text_area("Análisis Equipos:", placeholder="Estado de superficies...")
+        st.markdown("### C. EQUIPOS Y UTENSILIOS")
+        diag_equ = st.selectbox("Diagnóstico Equipos:", ["CONFORME", "CUMPLE PARCIALMENTE", "NO CONFORME"], index=0, key="sel_equ")
+        obs_equ = st.text_area("Observaciones Equipos:", placeholder="Describa hallazgos sobre limpieza y mantenimiento...", key="obs_equ")
 
-        riesgo_mip = st.select_slider("Nivel Riesgo MIP:", options=["BAJO", "MODERADO", "ALTO", "CRÍTICO"])
+        st.markdown("### D. MANEJO INTEGRAL DE PLAGAS")
+        riesgo_mip = st.select_slider("Nivel de Riesgo MIP:", options=["BAJO", "MODERADO", "ALTO", "CRÍTICO"], value="BAJO", key="slide_mip")
 
 with tab3:
-    st.subheader("3. Diagnóstico y Plan de Acción")
-    eval_mip = st.text_area("Evaluación MIP:", placeholder="Análisis de focos de plagas...")
-    plan_accion = st.text_area("Recomendaciones:", value="- Reorganización de frío.\n- Mejora en rotulado.\n- Desinfección de superficies.")
+    st.subheader("3. Diagnóstico Final y Recomendaciones")
+    eval_mip = st.text_area("Evaluación General MIP:", placeholder="Análisis de focos, refugios o indicios de vectores...", key="final_mip")
+    plan_accion = st.text_area("Recomendaciones y Plan de Acción:", 
+                               value="- Reorganización inmediata de almacenamiento por naturaleza.\n- Refuerzo en el sistema de rotulado interno.\n- Mantenimiento preventivo de juntas y superficies de contacto.",
+                               height=150, key="plan")
 
-# 4. PROCESAMIENTO DEL INFORME
+# 4. PROCESAMIENTO Y GENERACIÓN DEL INFORME
 st.divider()
-if st.button("🚀 GENERAR ANÁLISIS COMPLETO"):
-    txt_evidencias = "\n\n".join(analisis_fotos) if analisis_fotos else "Sin evidencias."
+if st.button("🚀 GENERAR INFORME TÉCNICO COMPLETO"):
+    txt_evidencias = "\n\n".join(analisis_fotos) if analisis_fotos else "Sin evidencias registradas."
     
     informe = (
-        "INFORME TÉCNICO DE AUDITORÍA - ZODION SERVICIOS AMBIENTALES\n"
-        f"CLIENTE: {cliente.upper()} | FECHA: {fecha_auditoria}\n"
-        f"AUDITOR: {auditor} | CIUDAD: PASTO, NARIÑO\n"
+        "INFORME TÉCNICO DE AUDITORÍA Y DIAGNÓSTICO PROFESIONAL\n"
+        "ZODION SERVICIOS AMBIENTALES\n"
+        "============================================================\n\n"
+        f"ESTABLECIMIENTO: {cliente.upper()}\n"
+        f"FECHA: {fecha_auditoria.strftime('%d de %B de %Y')}\n"
+        f"AUDITOR: {auditor}\n"
+        f"UBICACIÓN: Pasto, Nariño, Colombia\n"
+        f"NORMATIVA: Resolución 2674 de 2013\n\n"
         "------------------------------------------------------------\n"
         "1. ANÁLISIS DE EVIDENCIAS FOTOGRÁFICAS (IA VISION)\n"
+        "------------------------------------------------------------\n"
         f"{txt_evidencias}\n\n"
-        "2. EVALUACIÓN NORMATIVA\n"
-        f"- SEGREGACIÓN: {diag_seg} ({obs_seg})\n"
-        f"- TRAZABILIDAD: {diag_tra} ({obs_tra})\n"
-        f"- EQUIPOS: {diag_equ} ({obs_equ})\n\n"
-        "3. DIAGNÓSTICO MIP\n"
-        f"Nivel de Riesgo: {riesgo_mip}\n"
-        f"Evaluación: {eval_mip}\n\n"
-        "4. PLAN DE ACCIÓN\n"
+        "------------------------------------------------------------\n"
+        "2. EVALUACIÓN TÉCNICA POR COMPONENTES\n"
+        "------------------------------------------------------------\n"
+        f"A. SEGREGACIÓN Y DISPOSICIÓN: {diag_seg}\n"
+        f"   Análisis: {obs_seg}\n\n"
+        f"B. TRAZABILIDAD Y CADUCIDAD: {diag_tra}\n"
+        f"   Análisis: {obs_tra}\n\n"
+        f"C. EQUIPOS Y UTENSILIOS: {diag_equ}\n"
+        f"   Análisis: {obs_equ}\n\n"
+        "------------------------------------------------------------\n"
+        "3. DIAGNÓSTICO DEL MANEJO INTEGRAL DE PLAGAS (MIP)\n"
+        "------------------------------------------------------------\n"
+        f"Nivel de Riesgo detectado: {riesgo_mip}.\n"
+        f"Evaluación técnica: {eval_mip}\n\n"
+        "------------------------------------------------------------\n"
+        "4. RECOMENDACIONES Y PLAN DE ACCIÓN\n"
+        "------------------------------------------------------------\n"
         f"{plan_accion}\n\n"
+        "------------------------------------------------------------\n"
         "JUNTOS LO HACEMOS POSIBLE.\n"
+        "ZODION - PASTO, NARIÑO.\n"
         "============================================================"
     )
     st.session_state.informe_final = informe
-    st.success("✅ Análisis realizado")
+    st.success("✅ Informe generado correctamente. Revise la vista previa abajo.")
 
+# 5. VISUALIZACIÓN Y DESCARGA
 if st.session_state.informe_final:
-    st.text_area("Vista Previa del Informe:", st.session_state.informe_final, height=300)
-    st.download_button("📥 DESCARGAR INFORME (.DOC)", st.session_state.informe_final, 
-                       file_name=f"Zodion_{cliente}.doc", mime="application/msword")
-
-
+    st.markdown('<div class="report-preview">', unsafe_allow_html=True)
+    st.text(st.session_state.informe_final)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.download_button(
+        label="📥 DESCARGAR INFORME OFICIAL (.DOC)",
+        data=st.session_state.informe_final,
+        file_name=f"Informe_Zodion_{cliente}_{datetime.now().strftime('%d_%m_%Y')}.doc",
+        mime="application/msword"
+    )
 
 
 
