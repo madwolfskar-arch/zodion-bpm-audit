@@ -40,7 +40,7 @@ with st.sidebar:
     fecha_auditoria = st.date_input("Fecha", datetime.now())
     auditor = st.text_input("Auditor", value="CEO Zodion")
     st.divider()
-    st.caption("Especialistas en Saneamiento Ecológico")
+    st.caption("Pioneros en Saneamiento Ecológico")
 
 # 3. Módulos de Inspección Profesional
 tab1, tab2, tab3 = st.tabs(["📸 Análisis de Evidencia", "🔍 Evaluación Técnica", "📝 Diagnóstico y Plan"])
@@ -64,84 +64,85 @@ with tab2:
     st.subheader("2. Evaluación Técnica por Elementos")
     
     st.markdown("### A. SEGREGACIÓN Y DISPOSICIÓN (Art. 16, 27)")
-    diag_seg = st.selectbox("Diagnóstico Segregación:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], key="diag_seg")
-    analisis_seg = st.text_area("Análisis Segregación:", "Según la normativa, los alimentos deben almacenarse según su naturaleza para evitar la contaminación cruzada...")
+    diag_seg = st.selectbox("Diagnóstico Segregación:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], index=2)
+    analisis_seg = st.text_area("Análisis Segregación:", "Según la normativa, los alimentos deben almacenarse según su naturaleza para evitar la contaminación cruzada. Se observa mezcla de elementos en el equipo de frío...")
 
     st.markdown("### B. TRAZABILIDAD Y CADUCIDAD (Art. 16)")
-    diag_tra = st.selectbox("Diagnóstico Trazabilidad:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], key="diag_tra")
-    analisis_tra = st.text_area("Análisis Trazabilidad:", "Los productos cuentan con rotulado de fábrica. Se evidencia la necesidad de etiquetas internas...")
+    diag_tra = st.selectbox("Diagnóstico Trazabilidad:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], index=1)
+    analisis_tra = st.text_area("Análisis Trazabilidad:", "Los productos cuentan con rotulado de fábrica. No obstante, en productos trasvasados se requiere implementación de etiquetas internas Zodion...")
 
     st.markdown("### C. EQUIPOS Y UTENSILIOS (Art. 10-13)")
-    diag_equ = st.selectbox("Diagnóstico Equipos:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], key="diag_equ")
-    analisis_equ = st.text_area("Análisis Equipos:", "Las superficies internas cumplen con material inerte. Se recomienda limpieza profunda en juntas...")
+    diag_equ = st.selectbox("Diagnóstico Equipos:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], index=0)
+    analisis_equ = st.text_area("Análisis Equipos:", "Las superficies internas cumplen con material inerte. Se recomienda limpieza profunda en juntas de caucho para evitar biopelículas...")
 
 with tab3:
     st.subheader("3. Diagnóstico MIP y 4. Recomendaciones")
-    riesgo_mip = st.select_slider("Nivel de Riesgo MIP:", options=["BAJO", "MODERADO", "ALTO", "CRÍTICO"])
-    eval_mip = st.text_area("Evaluación MIP:", "El desorden en el almacenamiento facilita la creación de refugios...")
+    riesgo_mip = st.select_slider("Nivel de Riesgo MIP:", options=["BAJO", "MODERADO", "ALTO", "CRÍTICO"], value="MODERADO")
+    eval_mip = st.text_area("Evaluación MIP:", "El desorden en el almacenamiento y la falta de segregación facilitan la creación de refugios para vectores...")
     
     st.divider()
     plan_accion = st.text_area("Recomendaciones y Plan de Acción:", 
-                               "- Reorganización Inmediata\n- Etiquetado Interno\n- Higiene de Equipos\n- Uso de Recipientes")
+                               "- Reorganización Inmediata: Jerarquía de frío.\n- Etiquetado Interno: Fechas de apertura.\n- Higiene de Equipos: Desinfección profunda.\n- Uso de Recipientes: Hermeticidad grado alimenticio.")
 
-# 4. Procesamiento con Estructura Zodion
+# 4. Procesamiento de Informe Optimizado
 st.divider()
 if st.button("🚀 GENERAR INFORME TÉCNICO PROFESIONAL"):
     
     txt_fotos = "\n".join(analisis_fotos) if analisis_fotos else "Sin evidencias registradas."
     
-    # Construcción segura del string para evitar SyntaxError
+    # Construcción del informe con la estructura exacta solicitada
     cuerpo_informe = (
-        f"INFORME TÉCNICO DE AUDITORÍA Y DIAGNÓSTICO PROFESIONAL\n"
-        f"ZODION SERVICIOS AMBIENTALES\n\n"
+        "INFORME TÉCNICO DE AUDITORÍA Y DIAGNÓSTICO PROFESIONAL\n"
+        "ZODION SERVICIOS AMBIENTALES\n\n"
         f"ESTABLECIMIENTO: {cliente.upper()}\n"
         f"FECHA: {fecha_auditoria.strftime('%d de %B de %Y')}\n"
         f"AUDITOR: {auditor}\n"
         f"SISTEMA DE REFERENCIA: Resolución 2674 de 2013 (Colombia)\n\n"
-        f"------------------------------------------------------------\n"
-        f"1. ANÁLISIS DETALLADO DE EVIDENCIA FOTOGRÁFICA\n"
-        f"------------------------------------------------------------\n"
+        "------------------------------------------------------------\n"
+        "1. ANÁLISIS DETALLADO DE EVIDENCIA FOTOGRÁFICA\n"
+        "------------------------------------------------------------\n"
         f"{txt_fotos}\n\n"
-        f"------------------------------------------------------------\n"
-        f"2. EVALUACIÓN TÉCNICA POR ELEMENTOS\n"
-        f"------------------------------------------------------------\n"
-        f"A. SEGREGACIÓN Y DISPOSICIÓN (Art. 16, 27)\n"
+        "------------------------------------------------------------\n"
+        "2. EVALUACIÓN TÉCNICA POR ELEMENTOS\n"
+        "------------------------------------------------------------\n"
+        "A. SEGREGACIÓN Y DISPOSICIÓN (Art. 16, 27)\n"
         f"Diagnóstico: {diag_seg}\n"
         f"Análisis: {analisis_seg}\n\n"
-        f"B. TRAZABILIDAD Y CADUCIDAD (Art. 16)\n"
+        "B. TRAZABILIDAD Y CADUCIDAD (Art. 16)\n"
         f"Diagnóstico: {diag_tra}\n"
         f"Análisis: {analisis_tra}\n\n"
-        f"C. EQUIPOS Y UTENSILIOS (Art. 10-13)\n"
+        "C. EQUIPOS Y UTENSILIOS (Art. 10-13)\n"
         f"Diagnóstico: {diag_equ}\n"
         f"Análisis: {analisis_equ}\n\n"
-        f"------------------------------------------------------------\n"
-        f"3. DIAGNÓSTICO DEL MANEJO INTEGRAL DE PLAGAS (MIP)\n"
-        f"------------------------------------------------------------\n"
+        "------------------------------------------------------------\n"
+        "3. DIAGNÓSTICO DEL MANEJO INTEGRAL DE PLAGAS (MIP)\n"
+        "------------------------------------------------------------\n"
         f"Nivel de Riesgo: {riesgo_mip}.\n"
         f"Evaluación: {eval_mip}\n\n"
-        f"------------------------------------------------------------\n"
-        f"4. RECOMENDACIONES Y PLAN DE ACCIÓN\n"
-        f"------------------------------------------------------------\n"
+        "------------------------------------------------------------\n"
+        "4. RECOMENDACIONES Y PLAN DE ACCIÓN\n"
+        "------------------------------------------------------------\n"
         f"{plan_accion}\n\n"
-        f"------------------------------------------------------------\n"
-        f"JUNTOS LO HACEMOS POSIBLE.\n"
-        f"ZODION - PASTO, NARIÑO.\n"
-        f"============================================================"
+        "------------------------------------------------------------\n"
+        "JUNTOS LO HACEMOS POSIBLE.\n"
+        "ZODION - PASTO, NARIÑO.\n"
+        "============================================================"
     )
 
     st.session_state.informe_final = cuerpo_informe
-    st.info("✅ Informe estructurado exitosamente.")
+    st.success("✅ Informe generado exitosamente.")
 
-# 5. Visualización y Descarga Word
+# 5. Visualización y Descarga Directa
 if st.session_state.informe_final:
     st.markdown('<div class="report-preview">', unsafe_allow_html=True)
     st.text(st.session_state.informe_final)
     st.markdown('</div>', unsafe_allow_html=True)
     
+    # Optimizamos la descarga como archivo .doc para apertura inmediata en Word
     st.download_button(
-        label="📥 DESCARGAR INFORME EN FORMATO WORD (.DOC)",
+        label="📥 DESCARGAR INFORME OFICIAL (.DOC)",
         data=st.session_state.informe_final,
-        file_name=f"Informe_Tecnico_Zodion_{cliente}.doc",
+        file_name=f"Informe_Zodion_{cliente}_{datetime.now().strftime('%d_%m_%Y')}.doc",
         mime="application/msword"
     )
 
