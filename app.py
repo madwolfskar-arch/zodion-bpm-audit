@@ -46,85 +46,106 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📸 Análisis de Evidencia Fotográfica", "🔍 Evaluación de Elementos", "📝 Diagnóstico Final"])
 
 with tab1:
-    st.subheader("Carga y Descripción de Evidencias")
+    st.subheader("Carga y Análisis de Evidencias")
     fotos = st.file_uploader("Suba las fotografías de la inspección", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
     
-    analisis_fotos = []
+    descripciones = []
     if fotos:
         for i, foto in enumerate(fotos):
-            st.write(f"**Identificación de Elemento en Foto {i+1}:**")
-            desc = st.text_area(f"Análisis técnico de la imagen {i+1}:", 
-                                placeholder="Describa el hallazgo...", key=f"foto_{i}")
-            analisis_fotos.append(f"- Evidencia {i+1}: {desc}")
+            col_img, col_txt = st.columns([1, 2])
+            with col_img:
+                st.image(foto, caption=f"Evidencia {i+1}", use_container_width=True)
+            with col_txt:
+                desc = st.text_area(f"Análisis técnico de la imagen {i+1}:", 
+                                   placeholder="Ej: Se observa falta de segregación en lácteos y cárnicos...", 
+                                   key=f"txt_foto_{i}")
+                descripciones.append(f"- Evidencia {i+1}: {desc}")
 
 with tab2:
-    st.subheader("Evaluación de Conformidad por Elemento")
+    st.subheader("Evaluación Normativa (Res. 2674 de 2013)")
     col1, col2 = st.columns(2)
     with col1:
-        eval_infra = st.selectbox("Estado de Edificación (Art. 6):", ["Conforme", "No Conforme", "Riesgo Crítico"])
-        eval_equipo = st.selectbox("Estado de Equipos (Art. 10):", ["Conforme", "No Conforme"])
-        desc_infra_equipo = st.text_area("Detalle técnico de Activos:", "Evaluación de superficies y diseño sanitario.")
+        st.markdown("**Infraestructura y Equipos**")
+        eval_infra = st.selectbox("Edificación (Art. 6):", ["Conforme", "No Conforme", "Riesgo Crítico"])
+        eval_equipo = st.selectbox("Equipos (Art. 10):", ["Conforme", "No Conforme"])
+        desc_activos = st.text_area("Detalle técnico de Activos:", "Superficies inertes y materiales conformes.")
     with col2:
-        eval_prod = st.selectbox("Cumplimiento de Caducidad (Art. 16):", ["Sin Novedad", "Hallazgos Menores", "Incumplimiento Grave"])
-        eval_emp = st.selectbox("Integridad de Empaques (Art. 33):", ["Conforme", "No Conforme"])
-        desc_prod_emp = st.text_area("Análisis de Productos e Insumos:", "Verificación de rotulado y trazabilidad.")
+        st.markdown("**Trazabilidad y Disposición**")
+        eval_segregacion = st.selectbox("Segregación de Alimentos:", ["Conforme", "Deficiente (Mezcla de tipos)", "Crítico"])
+        eval_prod = st.selectbox("Caducidad (Art. 16):", ["Vigente", "Hallazgos de Vencimiento"])
+        desc_insumos = st.text_area("Análisis de Productos:", "Verificación de rotulado y cadena de frío.")
 
 with tab3:
-    st.subheader("Manejo Integral de Plagas y Saneamiento")
-    eval_mip = st.radio("Diagnóstico de Actividad de Plagas:", ["Nula", "Baja", "Moderada", "Alta"])
-    recomendaciones_extra = st.text_area("Recomendaciones Estratégicas Zodion:", "Enfoque de saneamiento ecológico.")
+    st.subheader("Diagnóstico Zodion")
+    eval_mip = st.radio("Riesgo de Plagas:", ["Nula", "Baja", "Moderada", "Alta"])
+    recomendaciones = st.text_area("Plan de Mejora y Recomendaciones:", 
+                                  "Implementar etiquetas de trazabilidad interna y reordenar cavas de frío.")
 
-# 4. Generación del Informe
+# 4. Generación del Informe Profesional Extenso
 st.divider()
 if st.button("🚀 PROCESAR AUDITORÍA Y GENERAR DOCUMENTACIÓN"):
-    evidencias_texto = "\n".join(analisis_fotos) if analisis_fotos else "Sin registros fotográficos."
+    
+    txt_evidencias = "\n".join(descripciones) if descripciones else "No se registraron evidencias fotográficas."
     
     informe_extenso = f"""
 ======================================================================
          INFORME TÉCNICO DE AUDITORÍA Y DIAGNÓSTICO PROFESIONAL
                      ZODION SERVICIOS AMBIENTALES
 ======================================================================
-ESTABLECIMIENTO: {cliente.upper()}
+CLIENTE: {cliente.upper()}
 FECHA DE INSPECCIÓN: {fecha}
 AUDITOR RESPONSABLE: {auditor}
-SISTEMA DE REFERENCIA: Resolución 2674 de 2013 (Colombia)
+SISTEMA DE REFERENCIA: Resolución 2674 de 2013 (BPM Colombia)
 ----------------------------------------------------------------------
 
 1. ANÁLISIS DETALLADO DE EVIDENCIA FOTOGRÁFICA
-{evidencias_texto}
+{txt_evidencias}
 
 2. EVALUACIÓN TÉCNICA POR ELEMENTOS
-A. EDIFICACIÓN E INSTALACIONES: {eval_infra}. {desc_infra_equipo}
-B. EQUIPOS Y UTENSILIOS: {eval_equipo}.
-C. ALIMENTOS, BEBIDAS Y EMPAQUES: Caducidad {eval_prod} | Empaques {eval_emp}.
-   Análisis Técnico: {desc_prod_emp}
+A. EDIFICACIÓN E INSTALACIONES (Cap. I, Art. 6-9):
+   Diagnóstico: {eval_infra}
+   Observaciones: {desc_activos}
+
+B. EQUIPOS Y UTENSILIOS (Cap. II, Art. 10-13):
+   Estado: {eval_equipo}
+   Análisis: Los equipos deben garantizar la ausencia de contaminación cruzada.
+
+C. ALIMENTOS, BEBIDAS Y EMPAQUES (Cap. IV y VI):
+   Segregación de Productos: {eval_segregacion}
+   Control de Caducidades: {eval_prod}
+   Análisis Técnico: {desc_insumos}
 
 3. DIAGNÓSTICO DEL MANEJO INTEGRAL DE PLAGAS (MIP)
-   Nivel de Riesgo Detectado: {eval_mip}
+   Riesgo Detectado: {eval_mip}
+   Evaluación: El orden y la limpieza son la base del saneamiento ecológico.
 
-4. RECOMENDACIONES PARA EL CUMPLIMIENTO NORMATIVO
-   - Aplicar protocolos Zodion para la gestión de puntos críticos.
-   - Detalle adicional: {recomendaciones_extra}
+4. RECOMENDACIONES Y PLAN DE ACCIÓN PROFESIONAL
+- RECOMENDACIÓN DE SEGREGACIÓN: Separar estrictamente cárnicos de lácteos y verduras (Art. 27).
+- RECOMENDACIÓN DE TRAZABILIDAD: Implementar etiquetas de "Producto Abierto" (Art. 16).
+- ACCIÓN SUGERIDA: {recomendaciones}
 
-------------------------------------------------------------
+----------------------------------------------------------------------
+ESTE DOCUMENTO ES UN DIAGNÓSTICO TÉCNICO BASADO EN EVIDENCIA VISUAL.
 JUNTOS LO HACEMOS POSIBLE. ZODION - PASTO, NARIÑO.
-============================================================
+======================================================================
 """
     st.session_state.informe_final = informe_extenso
-    st.success("✅ Análisis realizado exitosamente.")
+    st.info("✅ Análisis realizado")
 
-# 5. Descarga en Formato Word (.doc)
+# 5. Visualización y Descarga Word
 if st.session_state.informe_final:
     st.markdown('<div class="report-preview">', unsafe_allow_html=True)
     st.text(st.session_state.informe_final)
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.download_button(
-        label="📥 DESCARGAR INFORME EN FORMATO WORD (.DOC)",
+        label="📥 DESCARGAR INFORME TÉCNICO PROFESIONAL (.DOC)",
         data=st.session_state.informe_final,
         file_name=f"Informe_Zodion_{cliente}_{datetime.now().strftime('%d_%m_%Y')}.doc",
         mime="application/msword",
-        key="btn_descarga_word"
+        key="btn_descarga_word_v5"
     )
-    
+
+
+
 
