@@ -8,17 +8,34 @@ import io
 # 1. CONFIGURACIÓN DE IDENTIDAD ZODION
 st.set_page_config(page_title="Zodion - Auditoría Técnica IA", page_icon="🛡️", layout="wide")
 
-# Configuración de IA con forzado de versión estable
+# Inicialización con Autodetección de Modelos
 model = None
+status_ia = "🔴 No configurada"
+
 if "GOOGLE_API_KEY" in st.secrets:
     try:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"].strip())
-        # Usamos el nombre del modelo sin prefijos de versión para evitar el 404
-        model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+        
+        # BUSCADOR DE MODELOS DISPONIBLES (Evita el error 404)
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        # Prioridad de selección
+        target_model = None
+        for name in ["models/gemini-1.5-flash", "models/gemini-1.5-pro", "models/gemini-pro-vision"]:
+            if name in available_models:
+                target_model = name
+                break
+        
+        if target_model:
+            model = genai.GenerativeModel(target_model)
+            status_ia = f"🟢 Conectado a {target_model.split('/')[-1]}"
+        else:
+            status_ia = "⚠️ No se hallaron modelos compatibles."
+            
     except Exception as e:
-        st.error(f"Error al configurar Google AI: {e}")
+        status_ia = f"❌ Error de Conexión: {str(e)}"
 else:
-    st.warning("⚠️ Agrega 'GOOGLE_API_KEY' en los Secrets de Streamlit.")
+    status_ia = "⚠️ Falta GOOGLE_API_KEY en Secrets"
 
 # Estética Corporativa
 st.markdown("""
@@ -44,28 +61,30 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🛡️ Sistema de Diagnóstico Técnico ZODION")
-st.caption("CEO de Zodion - Saneamiento Ecológico Profesional - Pasto, Nariño")
+st.caption("Innovación en Saneamiento Ecológico Profesional - Pasto, Nariño")
 
-if 'analisis_dict' not in st.session_state:
-    st.session_state.analisis_dict = {}
+if 'analisis_cache' not in st.session_state:
+    st.session_state.analisis_cache = {}
 
 # 2. BARRA LATERAL
 with st.sidebar:
-    st.header("📋 Datos de Auditoría")
+    st.header("📋 Estado del Sistema")
+    st.info(f"IA: {status_ia}")
+    st.divider()
     cliente = st.text_input("Establecimiento / Cliente", value="JAVERIANO")
     fecha_auditoria = st.date_input("Fecha", datetime.now())
     auditor = st.text_input("Auditor", value="CEO Zodion")
     st.divider()
-    if st.button("🔄 Reiniciar Aplicación"):
-        st.session_state.analisis_dict = {}
+    if st.button("🔄 Reiniciar Auditoría"):
+        st.session_state.analisis_cache = {}
         st.rerun()
 
 # 3. MÓDULOS DE INSPECCIÓN
-tab1, tab2, tab3 = st.tabs(["📸 IA Vision", "🔍 Evaluación", "📝 Reporte"])
+tab1, tab2, tab3 = st.tabs(["📸 IA Vision", "🔍 Evaluación Técnica", "📝 Reporte Final"])
 
 with tab1:
-    st.subheader("1. Análisis con IA")
-    fotos = st.file_uploader("Subir fotos", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+    st.subheader("1. Análisis de Evidencias")
+    fotos = st.file_uploader("Cargar imágenes de inspección", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
     
     if fotos:
         for i, foto in enumerate(fotos):
@@ -74,45 +93,42 @@ with tab1:
                 st.image(foto, use_container_width=True)
                 if st.button(f"🪄 Analizar Foto {i+1}", key=f"btn_{i}"):
                     if model:
-                        with st.spinner("Zodion AI analizando..."):
+                        with st.spinner("Zodion AI procesando..."):
                             try:
                                 img = Image.open(foto).convert('RGB')
-                                # Nueva forma de llamado más simple para evitar errores de versión
-                                response = model.generate_content(["Analiza esta imagen para auditoría de alimentos (Res 2674 Colombia). Describe hallazgos sanitarios brevemente.", img])
-                                st.session_state.analisis_dict[f"foto_{i}"] = response.text
+                                response = model.generate_content(["Describe hallazgos sanitarios (Res. 2674) en esta imagen.", img])
+                                st.session_state.analisis_cache[f"f_{i}"] = response.text
                             except Exception as e:
                                 st.error(f"Error en el análisis: {e}")
                     else:
-                        st.error("IA no configurada.")
+                        st.error("IA no lista. Verifique la barra lateral.")
 
             with col_txt:
                 titulo = st.text_input(f"Título {i+1}:", value=f"Evidencia {i+1}", key=f"tit_{i}")
-                desc_ia = st.text_area(f"Análisis Técnico:", value=st.session_state.analisis_dict.get(f"foto_{i}", ""), key=f"txt_{i}", height=150)
+                analisis_ia = st.text_area(f"Resultado IA:", value=st.session_state.analisis_cache.get(f"f_{i}", ""), key=f"txt_{i}", height=150)
 
+# Módulos de texto simple
 with tab2:
     st.subheader("2. Evaluación Técnica")
     diag_seg = st.selectbox("Segregación:", ["CONFORME", "CUMPLE PARCIALMENTE", "NO CONFORME"])
-    obs_seg = st.text_area("Observación Segregación:", key="obs_s")
-    riesgo_mip = st.select_slider("Nivel Riesgo MIP:", options=["BAJO", "MODERADO", "ALTO", "CRÍTICO"])
+    riesgo_mip = st.select_slider("Riesgo MIP:", options=["BAJO", "MODERADO", "ALTO", "CRÍTICO"])
 
 with tab3:
     st.subheader("3. Recomendaciones")
-    plan_accion = st.text_area("Plan de Acción:", value="- Reorganización de almacenamiento.\n- Refuerzo de rotulado.")
+    plan = st.text_area("Plan de Acción:", value="- Reorganización de frío.\n- Higiene de superficies.")
 
 # 4. GENERACIÓN DE INFORME
 st.divider()
 if st.button("🚀 GENERAR INFORME"):
-    # Consolidar evidencias
     txt_evidencias = ""
     for i in range(len(fotos) if fotos else 0):
         t = st.session_state.get(f"tit_{i}", f"Evidencia {i+1}")
-        d = st.session_state.analisis_dict.get(f"foto_{i}", "Sin análisis.")
+        d = st.session_state.analisis_cache.get(f"f_{i}", "Sin datos.")
         txt_evidencias += f"{t.upper()}:\n{d}\n\n"
 
-    informe = f"INFORME ZODION - {cliente.upper()}\nFecha: {fecha_auditoria}\nAuditor: {auditor}\n\n1. EVIDENCIAS:\n{txt_evidencias}\n\n2. EVALUACIÓN:\nSegregación: {diag_seg}\nRiesgo MIP: {riesgo_mip}\n\n3. ACCIÓN:\n{plan_accion}"
-    
-    st.text_area("Vista Previa:", informe, height=250)
-    st.download_button("📥 DESCARGAR (.DOC)", informe, file_name=f"Zodion_{cliente}.doc")
+    informe = f"INFORME ZODION - {cliente.upper()}\nAUDITOR: {auditor}\nFECHA: {fecha_auditoria}\n\n1. EVIDENCIAS:\n{txt_evidencias}\n2. EVALUACIÓN:\nSegregación: {diag_seg}\nRiesgo: {riesgo_mip}\n\n3. PLAN:\n{plan}"
+    st.text_area("Vista Previa:", informe, height=200)
+    st.download_button("📥 DESCARGAR INFORME (.DOC)", informe, file_name=f"Zodion_{cliente}.doc")
 
 
 
