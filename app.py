@@ -1,125 +1,150 @@
 import streamlit as st
-import google.generativeai as genai
-from PIL import Image
+import pandas as pd
 from datetime import datetime
-import time
 
-# 1. CONFIGURACIÓN DE IDENTIDAD ZODION
-st.set_page_config(page_title="Zodion - Auditoría Técnica Profesional", page_icon="🛡️", layout="wide")
+# 1. Configuración de Identidad y Estética Corporativa
+st.set_page_config(page_title="Zodion - Auditoría Técnica de Evidencias", page_icon="🛡️", layout="wide")
 
 st.markdown("""
     <style>
-    .main { background-color: #f0f2f6; }
-    .stTextArea textarea { font-size: 14px !important; }
-    .stDownloadButton>button {
-        width: 100%;
-        background-color: #000000 !important;
-        color: #ffffff !important;
-        border-radius: 5px;
-        font-weight: bold;
+    .main { background-color: #f0f2f5; }
+    .stDownloadButton button {
+        background-color: #003366 !important;
+        color: white !important;
+        width: 100% !important;
+        height: 3.5em !important;
+        font-weight: bold !important;
+        border-radius: 8px !important;
+    }
+    .report-preview {
+        background-color: #ffffff;
+        padding: 40px;
+        border: 2px solid #003366;
+        border-radius: 10px;
+        font-family: 'Courier New', Courier, monospace;
+        color: #000;
+        white-space: pre-wrap;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. SEGURIDAD Y ACCESO
-CLAVE_ACCESO = "Zodion2026"
+st.title("🛡️ Sistema de Diagnóstico Técnico ZODION")
 
+if 'informe_final' not in st.session_state:
+    st.session_state.informe_final = ""
+
+# 2. Captura de Datos Generales
 with st.sidebar:
-    st.header("🔐 Acceso Zodion")
-    codigo = st.text_input("Código de Autorización:", type="password")
-    autenticado = (codigo == CLAVE_ACCESO)
-    
-    if autenticado:
-        st.success("Acceso Autorizado")
-    elif codigo != "":
-        st.error("Código Incorrecto")
-
+    st.header("📋 Datos de Auditoría")
+    cliente = st.text_input("Establecimiento / Cliente", value="JAVERIANO")
+    fecha_auditoria = st.date_input("Fecha", datetime.now())
+    auditor = st.text_input("Auditor", value="CEO Zodion")
     st.divider()
-    cliente = st.text_input("Cliente:", value="Colegio Javeriano / La Canasta")
-    auditor = st.text_input("Auditor:", value="CEO de Zodion")
-    fecha = st.date_input("Fecha:", datetime.now())
+    st.caption("Pioneros en Saneamiento Ecológico")
 
-# 3. CONEXIÓN OPTIMIZADA (Para evitar Error 404 y 429)
-model = None
-if autenticado and "GOOGLE_API_KEY" in st.secrets:
-    try:
-        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-        # Selección automática del modelo más eficiente
-        modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        target = next((m for m in modelos if '1.5-flash' in m), modelos[0] if modelos else None)
-        if target:
-            model = genai.GenerativeModel(target)
-    except Exception as e:
-        st.sidebar.error(f"Error de conexión: {e}")
+# 3. Módulos de Inspección Profesional
+tab1, tab2, tab3 = st.tabs(["📸 Análisis de Evidencia", "🔍 Evaluación Técnica", "📝 Diagnóstico y Plan"])
 
-# 4. INTERFAZ Y LÓGICA DE PERSISTENCIA
-st.title("🛡️ Sistema de Auditoría Técnica Profesional ZODION")
+with tab1:
+    st.subheader("1. Análisis Detallado de Evidencia Fotográfica")
+    fotos = st.file_uploader("Cargar registros fotográficos", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+    
+    analisis_fotos = []
+    if fotos:
+        for i, foto in enumerate(fotos):
+            col_img, col_txt = st.columns([1, 2])
+            with col_img:
+                st.image(foto, use_container_width=True)
+            with col_txt:
+                titulo_foto = st.text_input(f"Título de Evidencia {i+1}:", placeholder="Ej: Refrigeración/Lácteos", key=f"tit_{i}")
+                desc_foto = st.text_area(f"Análisis Técnico de Evidencia {i+1}:", key=f"desc_{i}")
+                analisis_fotos.append(f"Evidencia {i+1} ({titulo_foto}): {desc_foto}")
 
-if not autenticado:
-    st.warning("Ingrese el código en la barra lateral para comenzar.")
-else:
-    # Inicializar el almacén de análisis si no existe
-    if 'analisis_profesional' not in st.session_state:
-        st.session_state.analisis_profesional = {}
+with tab2:
+    st.subheader("2. Evaluación Técnica por Elementos")
+    
+    st.markdown("### A. SEGREGACIÓN Y DISPOSICIÓN (Art. 16, 27)")
+    diag_seg = st.selectbox("Diagnóstico Segregación:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], index=2)
+    analisis_seg = st.text_area("Análisis Segregación:", "Según la normativa, los alimentos deben almacenarse según su naturaleza para evitar la contaminación cruzada. Se observa mezcla de elementos en el equipo de frío...")
 
-    tab1, tab2 = st.tabs(["📸 Inspección de Campo", "📄 Informe Final"])
+    st.markdown("### B. TRAZABILIDAD Y CADUCIDAD (Art. 16)")
+    diag_tra = st.selectbox("Diagnóstico Trazabilidad:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], index=1)
+    analisis_tra = st.text_area("Análisis Trazabilidad:", "Los productos cuentan con rotulado de fábrica. No obstante, en productos trasvasados se requiere implementación de etiquetas internas Zodion...")
 
-    with tab1:
-        fotos = st.file_uploader("Cargar Evidencias", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
-        
-        if fotos:
-            for i, foto in enumerate(fotos):
-                # ID ÚNICO: Clave para que la IA no trabaje dos veces por la misma foto
-                foto_id = f"{foto.name}_{i}"
-                col_img, col_txt = st.columns([1, 2])
-                
-                with col_img:
-                    st.image(foto, use_container_width=True)
-                    
-                    # BOTÓN CON LÓGICA DE CONTROL DE CUOTA
-                    if st.button(f"🔍 Analizar {foto.name}", key=f"btn_{foto_id}"):
-                        if model:
-                            with st.spinner("IA Zodion evaluando..."):
-                                try:
-                                    img = Image.open(foto).convert('RGB')
-                                    prompt = "Actúa como Auditor Senior Res. 2674/2013. Analiza IDENTIFICACIÓN, HALLAZGOS, RIESGO y NORMATIVA."
-                                    response = model.generate_content([prompt, img])
-                                    # Guardamos en el estado para que no se pierda al recargar
-                                    st.session_state.analisis_profesional[foto_id] = response.text
-                                    st.rerun()
-                                except Exception as e:
-                                    if "429" in str(e):
-                                        st.error("⏳ CUOTA ALCANZADA: Google requiere una pausa. Por favor, espera 60 segundos antes de analizar la siguiente imagen.")
-                                    else:
-                                        st.error(f"Error: {e}")
-                
-                with col_txt:
-                    st.text_input(f"Título:", value=f"Evidencia {i+1}", key=f"tit_{foto_id}")
-                    # El área de texto lee directamente del estado guardado
-                    st.session_state.analisis_profesional[foto_id] = st.text_area(
-                        "Diagnóstico Normativo:", 
-                        value=st.session_state.analisis_profesional.get(foto_id, ""), 
-                        key=f"txt_{foto_id}", 
-                        height=200
-                    )
+    st.markdown("### C. EQUIPOS Y UTENSILIOS (Art. 10-13)")
+    diag_equ = st.selectbox("Diagnóstico Equipos:", ["CONFORME.", "CUMPLE PARCIALMENTE.", "NO CONFORME."], index=0)
+    analisis_equ = st.text_area("Análisis Equipos:", "Las superficies internas cumplen con material inerte. Se recomienda limpieza profunda en juntas de caucho para evitar biopelículas...")
 
-    with tab2:
-        st.subheader("Consolidación del Informe")
-        conclusion = st.text_area("Conclusiones Generales:", key="conc_final")
-        
-        informe_txt = f"INFORME ZODION - {cliente.upper()}\nAUDITOR: {auditor}\nFECHA: {fecha}\n"
-        informe_txt += "="*40 + "\n"
-        
-        for i, foto in enumerate(fotos if fotos else []):
-            f_id = f"{foto.name}_{i}"
-            tit = st.session_state.get(f"tit_{f_id}", f"Evidencia {i+1}")
-            diag = st.session_state.analisis_profesional.get(f_id, "Pendiente.")
-            informe_txt += f"\n>>> {tit.upper()}:\n{diag}\n"
-            informe_txt += "-"*40 + "\n"
+with tab3:
+    st.subheader("3. Diagnóstico MIP y 4. Recomendaciones")
+    riesgo_mip = st.select_slider("Nivel de Riesgo MIP:", options=["BAJO", "MODERADO", "ALTO", "CRÍTICO"], value="MODERADO")
+    eval_mip = st.text_area("Evaluación MIP:", "El desorden en el almacenamiento y la falta de segregación facilitan la creación de refugios para vectores...")
+    
+    st.divider()
+    plan_accion = st.text_area("Recomendaciones y Plan de Acción:", 
+                               "- Reorganización Inmediata: Jerarquía de frío.\n- Etiquetado Interno: Fechas de apertura.\n- Higiene de Equipos: Desinfección profunda.\n- Uso de Recipientes: Hermeticidad grado alimenticio.")
 
-        informe_txt += f"\nCONCLUSIÓN:\n{conclusion}\n\n'Juntos lo hacemos posible'"
-        st.text_area("Vista Previa:", informe_txt, height=300)
-        st.download_button("📥 DESCARGAR INFORME (.TXT)", data=informe_txt, file_name=f"Informe_Zodion_{cliente}.txt")
+# 4. Procesamiento de Informe Optimizado
+st.divider()
+if st.button("🚀 GENERAR INFORME TÉCNICO PROFESIONAL"):
+    
+    txt_fotos = "\n".join(analisis_fotos) if analisis_fotos else "Sin evidencias registradas."
+    
+    # Construcción del informe con la estructura exacta solicitada
+    cuerpo_informe = (
+        "INFORME TÉCNICO DE AUDITORÍA Y DIAGNÓSTICO PROFESIONAL\n"
+        "ZODION SERVICIOS AMBIENTALES\n\n"
+        f"ESTABLECIMIENTO: {cliente.upper()}\n"
+        f"FECHA: {fecha_auditoria.strftime('%d de %B de %Y')}\n"
+        f"AUDITOR: {auditor}\n"
+        f"SISTEMA DE REFERENCIA: Resolución 2674 de 2013 (Colombia)\n\n"
+        "------------------------------------------------------------\n"
+        "1. ANÁLISIS DETALLADO DE EVIDENCIA FOTOGRÁFICA\n"
+        "------------------------------------------------------------\n"
+        f"{txt_fotos}\n\n"
+        "------------------------------------------------------------\n"
+        "2. EVALUACIÓN TÉCNICA POR ELEMENTOS\n"
+        "------------------------------------------------------------\n"
+        "A. SEGREGACIÓN Y DISPOSICIÓN (Art. 16, 27)\n"
+        f"Diagnóstico: {diag_seg}\n"
+        f"Análisis: {analisis_seg}\n\n"
+        "B. TRAZABILIDAD Y CADUCIDAD (Art. 16)\n"
+        f"Diagnóstico: {diag_tra}\n"
+        f"Análisis: {analisis_tra}\n\n"
+        "C. EQUIPOS Y UTENSILIOS (Art. 10-13)\n"
+        f"Diagnóstico: {diag_equ}\n"
+        f"Análisis: {analisis_equ}\n\n"
+        "------------------------------------------------------------\n"
+        "3. DIAGNÓSTICO DEL MANEJO INTEGRAL DE PLAGAS (MIP)\n"
+        "------------------------------------------------------------\n"
+        f"Nivel de Riesgo: {riesgo_mip}.\n"
+        f"Evaluación: {eval_mip}\n\n"
+        "------------------------------------------------------------\n"
+        "4. RECOMENDACIONES Y PLAN DE ACCIÓN\n"
+        "------------------------------------------------------------\n"
+        f"{plan_accion}\n\n"
+        "------------------------------------------------------------\n"
+        "JUNTOS LO HACEMOS POSIBLE.\n"
+        "ZODION - PASTO, NARIÑO.\n"
+        "============================================================"
+    )
+
+    st.session_state.informe_final = cuerpo_informe
+    st.success("✅ Informe generado exitosamente.")
+
+# 5. Visualización y Descarga Directa
+if st.session_state.informe_final:
+    st.markdown('<div class="report-preview">', unsafe_allow_html=True)
+    st.text(st.session_state.informe_final)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Optimizamos la descarga como archivo .doc para apertura inmediata en Word
+    st.download_button(
+        label="📥 DESCARGAR INFORME OFICIAL (.DOC)",
+        data=st.session_state.informe_final,
+        file_name=f"Informe_Zodion_{cliente}_{datetime.now().strftime('%d_%m_%Y')}.doc",
+        mime="application/msword"
+    )
 
 
 
