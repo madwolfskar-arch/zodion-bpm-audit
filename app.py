@@ -1,128 +1,150 @@
 import streamlit as st
-import pandas as pd
+import google.generativeai as genai
+from PIL import Image
 from datetime import datetime
+import io
 
-# 1. Configuración de página y Estética Corporativa
-st.set_page_config(page_title="Zodion - Generador de Diagnósticos BPM", page_icon="🛡️", layout="wide")
+# 1. CONFIGURACIÓN DE IDENTIDAD ZODION
+st.set_page_config(page_title="Zodion IA - Auditoría Técnica", page_icon="🛡️", layout="wide")
 
+# Estética Profesional
 st.markdown("""
     <style>
-    .report-box {
-        background-color: #ffffff;
-        padding: 30px;
-        border: 1px solid #e0e0e0;
-        border-radius: 10px;
-        font-family: 'Segoe UI', sans-serif;
-    }
+    .main { background-color: #f8f9fa; }
     .stButton>button {
         background-color: #003366;
         color: white;
-        font-weight: bold;
-        height: 3em;
+        border-radius: 8px;
+        width: 100%;
+    }
+    .stDownloadButton>button {
+        background-color: #28a745 !important;
+        color: white !important;
+        font-weight: bold !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Datos de Entrada (Sidebar)
+# 2. CONEXIÓN DINÁMICA (LA QUE FUNCIONÓ)
+model = None
+if "GOOGLE_API_KEY" in st.secrets:
+    try:
+        api_key = st.secrets["GOOGLE_API_KEY"].strip().replace('"', '')
+        genai.configure(api_key=api_key)
+        
+        modelos_disponibles = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        # Selección inteligente de modelo
+        nombre_modelo = None
+        for target in ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro-vision']:
+            if target in modelos_disponibles:
+                nombre_modelo = target
+                break
+        
+        if not nombre_modelo and modelos_disponibles:
+            nombre_modelo = modelos_disponibles[0]
+
+        if nombre_modelo:
+            model = genai.GenerativeModel(nombre_modelo)
+            st.sidebar.success(f"🛡️ ZODION ACTIVO: {nombre_modelo.split('/')[-1]}")
+    except Exception as e:
+        st.sidebar.error(f"Error de conexión: {e}")
+else:
+    st.sidebar.warning("⚠️ Configura la API Key en Secrets")
+
+# 3. INTERFAZ Y CAPTURA DE DATOS
+st.title("🛡️ Sistema de Auditoría Digital ZODION")
+st.caption("Gestión de Inocuidad y Saneamiento Ecológico Profesional - Pasto, Nariño")
+
+if 'analisis_datos' not in st.session_state:
+    st.session_state.analisis_datos = {}
+
 with st.sidebar:
-    st.image("https://via.placeholder.com/200x80?text=ZODION", use_container_width=True)
-    st.header("📋 Datos del Servicio")
-    fecha = st.date_input("Fecha de Auditoría", datetime.now())
-    cliente = st.text_input("Nombre del Establecimiento", placeholder="Ej: Restaurante Central")
-    auditor = st.text_input("Auditor Responsable", value="Profesional Zodion")
+    st.header("📋 Información del Servicio")
+    cliente = st.text_input("Cliente/Establecimiento:", value="JAVERIANO")
+    auditor = st.text_input("Auditor Responsable:", value="CEO de Zodion")
+    fecha = st.date_input("Fecha de Auditoría:", datetime.now())
+    if st.button("🔄 Nueva Auditoría"):
+        st.session_state.analisis_datos = {}
+        st.rerun()
+
+# 4. PROCESAMIENTO DE EVIDENCIAS
+tab1, tab2 = st.tabs(["📸 Registro Fotográfico e IA", "📝 Informe Final"])
+
+with tab1:
+    fotos = st.file_uploader("Cargar evidencias (Máximo 10 fotos)", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+    
+    if fotos:
+        for i, foto in enumerate(fotos):
+            col_img, col_txt = st.columns([1, 2])
+            
+            with col_img:
+                st.image(foto, use_container_width=True)
+                if st.button(f"🪄 Analizar Hallazgo {i+1}", key=f"btn_{i}"):
+                    if model:
+                        with st.spinner("Procesando análisis técnico..."):
+                            try:
+                                img = Image.open(foto).convert('RGB')
+                                prompt = (
+                                    "Analiza como experto en inocuidad (Res. 2674 Colombia). "
+                                    "1. Identifica el objeto. 2. Describe hallazgos sanitarios. "
+                                    "3. Define riesgos de plagas o contaminación. Sé profesional y breve."
+                                )
+                                response = model.generate_content([prompt, img])
+                                st.session_state.analisis_datos[f"foto_{i}"] = response.text
+                            except Exception as e:
+                                st.error(f"Error en IA: {e}")
+            
+            with col_txt:
+                titulo = st.text_input(f"Título de la Evidencia {i+1}:", value=f"Evidencia {i+1}", key=f"tit_{i}")
+                resultado = st.text_area("Resultado del Análisis Técnico:", 
+                                         value=st.session_state.analisis_datos.get(f"foto_{i}", ""), 
+                                         key=f"txt_{i}", height=150)
+
+with tab2:
+    st.subheader("Configuración del Reporte")
+    riesgo = st.select_slider("Nivel de Riesgo Observado:", options=["BAJO", "MODERADO", "ALTO", "CRÍTICO"])
+    plan_accion = st.text_area("Plan de Acción y Recomendaciones:", 
+                               value="- Reforzar protocolos de limpieza.\n- Verificar hermeticidad en puntos críticos.")
+    
+    # 5. GENERACIÓN DEL ARCHIVO DESCARGABLE
     st.divider()
-    st.info("Este sistema genera diagnósticos basados en la Res. 2674/2013.")
+    
+    # Consolidación de texto para el informe
+    contenido_informe = f"""INFORME DE AUDITORÍA TÉCNICA - ZODION
+--------------------------------------------------
+CLIENTE: {cliente.upper()}
+FECHA: {fecha}
+AUDITOR: {auditor.upper()}
+ESTADO: {riesgo} RIESGO
+--------------------------------------------------
 
-st.title("🛡️ Panel de Auditoría y Diagnóstico BPM")
+DETALLE DE HALLAZGOS:
+"""
+    for i in range(len(fotos) if fotos else 0):
+        t = st.session_state.get(f"tit_{i}", f"Evidencia {i+1}")
+        d = st.session_state.analisis_datos.get(f"foto_{i}", "Sin análisis realizado.")
+        contenido_informe += f"\n> {t.upper()}:\n{d}\n"
 
-# 3. Formulario de Captura de Datos
-tabs = st.tabs(["🏗️ Instalaciones", "🧊 Almacenamiento y Productos", "🪳 Control de Plagas", "📸 Evidencias"])
+    contenido_informe += f"""
+--------------------------------------------------
+PLAN DE ACCIÓN SUGERIDO:
+{plan_accion}
 
-with tabs[0]:
-    col1, col2 = st.columns(2)
-    with col1:
-        ins_1 = st.selectbox("Estado de localización y accesos:", ["Cumple", "Cumple Parcialmente", "No Cumple"])
-        ins_2 = st.selectbox("Diseño y construcción (Protección):", ["Cumple", "Cumple Parcialmente", "No Cumple"])
-    with col2:
-        obs_ins = st.text_area("Hallazgos específicos en infraestructura")
+Generado por Zodion IA - Saneamiento Ecológico Profesional.
+"Juntos lo hacemos posible"
+"""
 
-with tabs[1]:
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("Control de Productos")
-        prod_cad = st.radio("¿Se evidencian productos con fecha de caducidad vencida?", ["No", "Sí"])
-        prod_rot = st.radio("¿El rotulado cumple con la normativa vigente?", ["Sí", "No"])
-    with c2:
-        st.subheader("Almacenamiento")
-        alm_sep = st.radio("¿Hay separación adecuada (evita contaminación cruzada)?", ["Sí", "No"])
-        obs_alm = st.text_area("Detalles de productos y almacenamiento")
+    st.text_area("Previsualización del Informe:", contenido_informe, height=300)
+    
+    # Botón de descarga
+    st.download_button(
+        label="📥 DESCARGAR INFORME (.DOC)",
+        data=contenido_informe,
+        file_name=f"Informe_Zodion_{cliente}_{fecha}.doc",
+        mime="application/msword"
+    )
 
-with tabs[2]:
-    p1 = st.checkbox("Programa de Control de Plagas documentado")
-    p2 = st.checkbox("Registros de aplicación de productos químicos/biológicos")
-    obs_pest = st.text_area("Observaciones del manejo integral de plagas")
 
-with tabs[3]:
-    fotos = st.file_uploader("Cargar registros fotográficos", type=["jpg", "png"], accept_multiple_files=True)
 
-st.divider()
 
-# 4. Lógica de Generación de Informe Diagnóstico
-if st.button("🚀 GENERAR INFORME TÉCNICO DIAGNÓSTICO"):
-    if not cliente:
-        st.warning("⚠️ Identifique el establecimiento antes de generar el informe.")
-    else:
-        st.balloons()
-        
-        # Inicio del Reporte Visual
-        st.markdown("---")
-        st.markdown(f"## 📋 INFORME DE DIAGNÓSTICO TÉCNICO: {cliente.upper()}")
-        
-        with st.container():
-            st.markdown(f"**Fecha:** {fecha} | **Auditor:** {auditor}")
-            
-            # Bloque de Análisis de Cumplimiento Normativo
-            st.markdown("### 1. Fundamentos de la Normativa")
-            st.write("El presente diagnóstico se emite bajo los criterios de la **Resolución 2674 de 2013**, la cual establece los requisitos sanitarios para el funcionamiento de establecimientos de alimentos en Colombia.")
-
-            # Bloque de Hallazgos y Análisis Detallado
-            col_a, col_b = st.columns(2)
-            
-            with col_a:
-                st.markdown("#### 🔍 Análisis de Almacenamiento")
-                if prod_cad == "Sí":
-                    st.error("**ALERTA CRÍTICA:** Se detectaron productos con fechas de caducidad vencidas. Incumplimiento directo del Art. 16.")
-                else:
-                    st.success("Gestión de inventarios adecuada en términos de vigencia.")
-                
-                if alm_sep == "No":
-                    st.warning("**HALLAZGO:** Riesgo de contaminación cruzada por almacenamiento inadecuado.")
-
-            with col_b:
-                st.markdown("#### 🔬 Estado de Instalaciones")
-                if ins_1 == "No Cumple" or ins_2 == "No Cumple":
-                    st.error("Infraestructura deficiente: No garantiza la protección contra factores externos.")
-                else:
-                    st.success("Las instalaciones cumplen con los estándares básicos de diseño sanitario.")
-
-            # Bloque de Sugerencias y Plan de Acción
-            st.markdown("### 💡 Sugerencias y Plan de Mejora")
-            sugerencias = []
-            if prod_cad == "Sí":
-                sugerencias.append("- Implementar sistema PEPS (Primero en Entrar, Primero en Salir) de manera rigurosa.")
-            if alm_sep == "No":
-                sugerencias.append("- Reorganizar estanterías manteniendo distancia mínima de 60cm entre grupos de alimentos distintos.")
-            if not p1 or not p2:
-                sugerencias.append("- Actualizar el manual de MIP (Manejo Integral de Plagas) con énfasis en métodos no contaminantes (Sello Zodion).")
-            
-            if sugerencias:
-                for s in sugerencias:
-                    st.write(s)
-            else:
-                st.write("Mantener los estándares actuales y realizar seguimiento trimestral.")
-
-            # Generación de archivo descargable (Resumen Ejecutivo)
-            resumen_texto = f"INFORME ZODION - {cliente}\nFECHA: {fecha}\nDIAGNÓSTICO: Basado en Res. 2674/2013\n\nSugerencias:\n" + "\n".join(sugerencias)
-            st.download_button("📥 Descargar Reporte en Texto", resumen_texto, file_name=f"Informe_{cliente}.txt")
-
-            
