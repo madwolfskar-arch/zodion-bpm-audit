@@ -2,17 +2,44 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 from datetime import datetime
-from fpdf import FPDF # Nueva librería para PDF
+from fpdf import FPDF
 import io
 
+# 1. CONFIGURACIÓN DE IDENTIDAD Y ESTÉTICA ZODION
+st.set_page_config(page_title="Zodion - Auditoría Técnica Profesional", page_icon="🛡️", layout="wide")
+
+st.markdown("""
+    <style>
+    .main { background-color: #f0f2f6; }
+    .stTextArea textarea { font-size: 14px !important; }
+    .stDownloadButton>button {
+        width: 100%;
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- INICIALIZACIÓN DE VARIABLES GLOBALES (Previene NameError) ---
+if 'analisis_profesional' not in st.session_state:
+    st.session_state.analisis_profesional = {}
+
+# Valores por defecto para evitar errores si se accede al Tab 2 primero
+cliente = "Colegio Javeriano / La Canasta"
+auditor = "CEO de Zodion"
+fecha = datetime.now()
+fotos = []
+
 # --- FUNCIÓN PARA GENERAR PDF PROFESIONAL ---
-def crear_pdf(cliente, auditor, fecha, hallazgos, conclusion):
+def crear_pdf(cliente_nom, auditor_nom, fecha_insp, hallazgos, conclusion_txt):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Encabezado Corporativo Zodion
-    pdf.set_fill_color(0, 51, 102) # Azul Oscuro
+    # Encabezado Corporativo
+    pdf.set_fill_color(0, 51, 102) 
     pdf.rect(0, 0, 210, 40, 'F')
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 16)
@@ -24,9 +51,9 @@ def crear_pdf(cliente, auditor, fecha, hallazgos, conclusion):
     # Datos Generales
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 7, f"CLIENTE: {cliente.upper()}", ln=True)
-    pdf.cell(0, 7, f"AUDITOR: {auditor.upper()}", ln=True)
-    pdf.cell(0, 7, f"FECHA: {fecha}", ln=True)
+    pdf.cell(0, 7, f"CLIENTE: {cliente_nom.upper()}", ln=True)
+    pdf.cell(0, 7, f"AUDITOR: {auditor_nom.upper()}", ln=True)
+    pdf.cell(0, 7, f"FECHA: {fecha_insp}", ln=True)
     pdf.cell(0, 7, "UBICACIÓN: Pasto, Nariño, Colombia", ln=True)
     pdf.ln(5)
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
@@ -35,13 +62,11 @@ def crear_pdf(cliente, auditor, fecha, hallazgos, conclusion):
     # Hallazgos
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 10, "RESUMEN DE HALLAZGOS TÉCNICOS:", ln=True)
-    pdf.set_font("Arial", size=10)
     
-    for i, (titulo, contenido) in enumerate(hallazgos.items()):
+    for titulo, contenido in hallazgos.items():
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(0, 7, f">>> {titulo.upper()}", ln=True)
         pdf.set_font("Arial", size=10)
-        # Multi_cell maneja párrafos largos y saltos de línea
         pdf.multi_cell(0, 5, txt=contenido)
         pdf.ln(3)
         pdf.line(15, pdf.get_y(), 100, pdf.get_y())
@@ -52,7 +77,7 @@ def crear_pdf(cliente, auditor, fecha, hallazgos, conclusion):
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 7, "CONCLUSIONES Y RECOMENDACIONES:", ln=True)
     pdf.set_font("Arial", size=10)
-    pdf.multi_cell(0, 5, txt=conclusion)
+    pdf.multi_cell(0, 5, txt=conclusion_txt)
     
     # Cierre
     pdf.ln(20)
@@ -63,54 +88,92 @@ def crear_pdf(cliente, auditor, fecha, hallazgos, conclusion):
     
     return pdf.output()
 
-# 1. CONFIGURACIÓN DE IDENTIDAD ZODION (Mantenida)
-st.set_page_config(page_title="Zodion - Auditoría Técnica Profesional", page_icon="🛡️", layout="wide")
+# 2. CONEXIÓN DINÁMICA DE IA
+model = None
+if "GOOGLE_API_KEY" in st.secrets:
+    try:
+        api_key = st.secrets["GOOGLE_API_KEY"].strip().replace('"', '')
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        st.sidebar.success("🛡️ ZODION ELITE CONECTADO")
+    except Exception as e:
+        st.sidebar.error(f"Error de conexión: {e}")
 
-# ... (El código de estética corporativa y conexión IA se mantiene igual) ...
+# 3. CAPTURA DE PARÁMETROS EN SIDEBAR
+with st.sidebar:
+    st.header("📋 Parámetros de Auditoría")
+    cliente = st.text_input("Cliente/Establecimiento:", value=cliente)
+    auditor = st.text_input("Auditor Técnico:", value=auditor)
+    fecha = st.date_input("Fecha de Inspección:", fecha)
+    st.divider()
+    st.info("Basado en Resolución 2674 de 2013")
 
-# [OMITIDO POR BREVEDAD: CONEXIÓN IA Y CAPTURA DE FOTOS SEGÚN TU CÓDIGO BASE]
+st.title("🛡️ Sistema de Auditoría Técnica Profesional ZODION")
+st.caption("Consultoría en Saneamiento Ambiental e Inocuidad Alimentaria")
 
-# 4. TAB DE GENERACIÓN DE INFORME
+# 4. ESTRUCTURA DE PESTAÑAS
+tab1, tab2 = st.tabs(["📸 Inspección de Campo", "📄 Generación de Informe"])
+
+with tab1:
+    fotos = st.file_uploader("Cargar Evidencias Fotográficas", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+    
+    if fotos:
+        for i, foto in enumerate(fotos):
+            col_img, col_txt = st.columns([1, 2])
+            with col_img:
+                st.image(foto, use_container_width=True, caption=f"Evidencia {i+1}")
+                if st.button(f"🔍 Analizar Evidencia {i+1}", key=f"btn_{i}"):
+                    if model:
+                        with st.spinner("IA Zodion evaluando..."):
+                            try:
+                                img = Image.open(foto).convert('RGB')
+                                prompt = "Actúa como Auditor Senior Res. 2674/2013. Analiza: 1. IDENTIFICACIÓN, 2. HALLAZGOS TÉCNICOS, 3. EVALUACIÓN DE RIESGO, 4. REFERENCIA NORMATIVA."
+                                response = model.generate_content([prompt, img])
+                                st.session_state.analisis_profesional[f"foto_{i}"] = response.text
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+            
+            with col_txt:
+                st.text_input(f"Título hallazgo {i+1}:", value=f"Evidencia {i+1}", key=f"tit_{i}")
+                st.text_area("Diagnóstico:", value=st.session_state.analisis_profesional.get(f"foto_{i}", ""), key=f"txt_{i}", height=180)
+
 with tab2:
     st.subheader("Consolidación del Informe Técnico Profesional")
-    conclusion = st.text_area("Conclusiones Generales de la Auditoría:", 
-                             placeholder="Ej: Se observa un cumplimiento del 85%...")
+    conclusion = st.text_area("Conclusiones Generales:", placeholder="Resumen del estado sanitario...")
 
-    # Preparar datos para el PDF
+    # Recopilar hallazgos para los exportadores
     dict_hallazgos = {}
-    for i in range(len(fotos) if fotos else 0):
-        t = st.session_state.get(f"tit_{i}", f"Evidencia {i+1}")
-        d = st.session_state.analisis_profesional.get(f"foto_{i}", "Análisis pendiente.")
-        dict_hallazgos[t] = d
+    informe_txt_previsual = ""
+    if fotos:
+        for i in range(len(fotos)):
+            t = st.session_state.get(f"tit_{i}", f"Evidencia {i+1}")
+            d = st.session_state.get(f"txt_{i}", "Sin diagnóstico.")
+            dict_hallazgos[t] = d
+            informe_txt_previsual += f"\n>>> {t.upper()}:\n{d}\n" + "-"*30 + "\n"
 
-    # COLUMNAS PARA BOTONES DE DESCARGA
     col_pdf, col_txt = st.columns(2)
 
     with col_pdf:
-        # BOTÓN GENERADOR DE PDF
-        if st.button("📑 PREPARAR INFORME PDF"):
+        if st.button("📑 GENERAR VISTA PREVIA PDF"):
             try:
-                pdf_output = crear_pdf(cliente, auditor, fecha, dict_hallazgos, conclusion)
+                pdf_bytes = crear_pdf(cliente, auditor, str(fecha), dict_hallazgos, conclusion)
                 st.download_button(
                     label="⬇️ DESCARGAR PDF PROFESIONAL",
-                    data=bytes(pdf_output),
-                    file_name=f"Informe_Zodion_{cliente}_{fecha}.pdf",
+                    data=bytes(pdf_bytes),
+                    file_name=f"Informe_Zodion_{cliente}.pdf",
                     mime="application/pdf"
                 )
-                st.success("PDF generado con éxito. Listo para descargar.")
+                st.success("PDF listo.")
             except Exception as e:
-                st.error(f"Error al generar PDF: {e}")
+                st.error(f"Error PDF: {e}")
 
     with col_txt:
-        # Tu botón original de TXT (Mantenido)
-        informe_txt = f"DATOS GENERALES...\n..." # (Lógica de texto original)
         st.download_button(
             label="📥 DESCARGAR COMO TXT",
-            data=informe_txt,
+            data=informe_txt_previsual,
             file_name=f"Informe_Zodion_{cliente}.txt",
             mime="text/plain"
         )
-
 
 
 
