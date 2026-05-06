@@ -22,14 +22,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN DE VARIABLES GLOBALES ---
+# --- INICIALIZACIÓN DE VARIABLES DE ESTADO ---
 if 'analisis_profesional' not in st.session_state:
     st.session_state.analisis_profesional = {}
-
-cliente = "Colegio Javeriano / La Canasta"
-auditor = "CEO de Zodion"
-fecha = datetime.now()
-fotos = []
 
 # --- FUNCIÓN PARA GENERAR PDF PROFESIONAL ---
 def crear_pdf(cliente_nom, auditor_nom, fecha_insp, hallazgos, conclusion_txt):
@@ -37,6 +32,7 @@ def crear_pdf(cliente_nom, auditor_nom, fecha_insp, hallazgos, conclusion_txt):
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
     
+    # Encabezado Corporativo Zodion
     pdf.set_fill_color(0, 51, 102) 
     pdf.rect(0, 0, 210, 40, 'F')
     pdf.set_text_color(255, 255, 255)
@@ -46,6 +42,7 @@ def crear_pdf(cliente_nom, auditor_nom, fecha_insp, hallazgos, conclusion_txt):
     pdf.cell(0, 10, "Saneamiento Ambiental e Inocuidad | Res. 2674 de 2013", ln=True, align='C')
     pdf.ln(15)
     
+    # Datos Generales
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 7, f"CLIENTE: {cliente_nom.upper()}", ln=True)
@@ -56,6 +53,7 @@ def crear_pdf(cliente_nom, auditor_nom, fecha_insp, hallazgos, conclusion_txt):
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
     pdf.ln(5)
     
+    # Hallazgos Técnicos
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 10, "RESUMEN DE HALLAZGOS TÉCNICOS:", ln=True)
     
@@ -63,17 +61,22 @@ def crear_pdf(cliente_nom, auditor_nom, fecha_insp, hallazgos, conclusion_txt):
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(0, 7, f">>> {titulo.upper()}", ln=True)
         pdf.set_font("Arial", size=10)
-        pdf.multi_cell(0, 5, txt=contenido.encode('latin-1', 'replace').decode('latin-1'))
+        # Limpieza de caracteres para compatibilidad con FPDF
+        txt_limpio = contenido.encode('latin-1', 'replace').decode('latin-1')
+        pdf.multi_cell(0, 5, txt=txt_limpio)
         pdf.ln(3)
         pdf.line(15, pdf.get_y(), 100, pdf.get_y())
         pdf.ln(3)
 
+    # Conclusiones
     pdf.ln(5)
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 7, "CONCLUSIONES Y RECOMENDACIONES:", ln=True)
     pdf.set_font("Arial", size=10)
-    pdf.multi_cell(0, 5, txt=conclusion_txt.encode('latin-1', 'replace').decode('latin-1'))
+    conc_limpia = conclusion_txt.encode('latin-1', 'replace').decode('latin-1')
+    pdf.multi_cell(0, 5, txt=conc_limpia)
     
+    # Cierre Corporativo
     pdf.ln(20)
     pdf.set_font("Arial", 'I', 9)
     pdf.set_text_color(128, 128, 128)
@@ -82,37 +85,31 @@ def crear_pdf(cliente_nom, auditor_nom, fecha_insp, hallazgos, conclusion_txt):
     
     return pdf.output()
 
-# 2. CONEXIÓN DINÁMICA DE IA (Corrección de Error 404)
+# 2. CONEXIÓN DINÁMICA DE IA
 model = None
 if "GOOGLE_API_KEY" in st.secrets:
     try:
         api_key = st.secrets["GOOGLE_API_KEY"].strip().replace('"', '')
         genai.configure(api_key=api_key)
-        
-        # Listar modelos disponibles para evitar el error 404
         modelos_disponibles = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        # Buscar la mejor versión disponible
-        target_model = next((m for m in modelos_disponibles if 'gemini-1.5-flash' in m), 
-                            next((m for m in modelos_disponibles if 'gemini-pro-vision' in m), 
-                            modelos_disponibles[0] if modelos_disponibles else None))
-        
+        target_model = next((m for m in modelos_disponibles if 'gemini-1.5-flash' in m), modelos_disponibles[0] if modelos_disponibles else None)
         if target_model:
             model = genai.GenerativeModel(target_model)
             st.sidebar.success(f"🛡️ MOTOR ACTIVO: {target_model.split('/')[-1]}")
     except Exception as e:
         st.sidebar.error(f"Error de conexión: {e}")
 
-# 3. CAPTURA DE PARÁMETROS EN SIDEBAR
+# 3. CAPTURA DE PARÁMETROS (SIDEBAR)
 with st.sidebar:
     st.header("📋 Parámetros de Auditoría")
-    cliente = st.text_input("Cliente/Establecimiento:", value=cliente)
-    auditor = st.text_input("Auditor Técnico:", value=auditor)
-    fecha = st.date_input("Fecha de Inspección:", fecha)
+    cliente = st.text_input("Cliente/Establecimiento:", value="Colegio Javeriano / La Canasta", key="input_cliente")
+    auditor = st.text_input("Auditor Técnico:", value="CEO de Zodion", key="input_auditor")
+    fecha = st.date_input("Fecha de Inspección:", datetime.now(), key="input_fecha")
     st.divider()
     st.info("Basado en Resolución 2674 de 2013")
 
 st.title("🛡️ Sistema de Auditoría Técnica Profesional ZODION")
-st.caption("Consultoría en Saneamiento Ambiental e Inocuidad Alimentaria")
+st.caption("Consultoría en Saneamiento Ambiental e Inocuidad Alimentaria | Juntos lo hacemos posible")
 
 # 4. ESTRUCTURA DE PESTAÑAS
 tab1, tab2 = st.tabs(["📸 Inspección de Campo", "📄 Generación de Informe"])
@@ -125,44 +122,46 @@ with tab1:
             col_img, col_txt = st.columns([1, 2])
             with col_img:
                 st.image(foto, use_container_width=True, caption=f"Evidencia {i+1}")
-                if st.button(f"🔍 Analizar Evidencia {i+1}", key=f"btn_{i}"):
+                if st.button(f"🔍 Analizar Evidencia {i+1}", key=f"btn_analisis_{i}"):
                     if model:
                         with st.spinner("IA Zodion evaluando..."):
                             try:
                                 img = Image.open(foto).convert('RGB')
-                                prompt = (
-                                    "Analiza bajo la Res. 2674/2013 de Colombia: "
-                                    "1. IDENTIFICACIÓN del ítem. "
-                                    "2. HALLAZGOS TÉCNICOS. "
-                                    "3. EVALUACIÓN DE RIESGO. "
-                                    "4. REFERENCIA NORMATIVA."
-                                )
+                                prompt = "Actúa como Auditor Senior Res. 2674/2013. Analiza detalladamente: 1. IDENTIFICACIÓN, 2. HALLAZGOS TÉCNICOS, 3. EVALUACIÓN DE RIESGO, 4. REFERENCIA NORMATIVA."
                                 response = model.generate_content([prompt, img])
                                 st.session_state.analisis_profesional[f"foto_{i}"] = response.text
                             except Exception as e:
-                                st.error(f"Error en análisis: {e}")
+                                st.error(f"Error: {e}")
             
             with col_txt:
+                # Al usar 'key', el contenido persiste en st.session_state automáticamente
                 st.text_input(f"Título hallazgo {i+1}:", value=f"Evidencia {i+1}", key=f"tit_{i}")
-                st.text_area("Diagnóstico:", value=st.session_state.analisis_profesional.get(f"foto_{i}", ""), key=f"txt_{i}", height=180)
+                st.text_area("Diagnóstico Profesional:", 
+                             value=st.session_state.analisis_profesional.get(f"foto_{i}", ""), 
+                             key=f"txt_{i}", 
+                             height=200)
 
 with tab2:
     st.subheader("Consolidación del Informe Técnico Profesional")
-    conclusion = st.text_area("Conclusiones Generales:", placeholder="Resumen del estado sanitario...")
+    # Captura de conclusión con persistencia
+    conclusion = st.text_area("Conclusiones Generales:", placeholder="Ej: Se observa un cumplimiento del 85%...", key="conclusion_final")
 
+    # Reconstrucción dinámica del diccionario de hallazgos
     dict_hallazgos = {}
     if fotos:
         for i in range(len(fotos)):
-            t = st.session_state.get(f"tit_{i}", f"Evidencia {i+1}")
-            d = st.session_state.get(f"txt_{i}", "Sin diagnóstico.")
-            dict_hallazgos[t] = d
+            # Se recuperan los valores actualizados desde el session_state
+            t_final = st.session_state.get(f"tit_{i}", f"Evidencia {i+1}")
+            d_final = st.session_state.get(f"txt_{i}", "")
+            if d_final: # Solo incluir si hay contenido
+                dict_hallazgos[t_final] = d_final
 
     col_pdf, col_txt = st.columns(2)
 
     with col_pdf:
-        if st.button("📑 GENERAR INFORME PDF"):
+        if st.button("📑 PREPARAR INFORME PDF"):
             if not dict_hallazgos:
-                st.warning("No hay hallazgos para exportar.")
+                st.warning("⚠️ No hay diagnósticos procesados para incluir en el PDF.")
             else:
                 try:
                     pdf_bytes = crear_pdf(cliente, auditor, str(fecha), dict_hallazgos, conclusion)
@@ -172,15 +171,17 @@ with tab2:
                         file_name=f"Informe_Zodion_{cliente}_{fecha}.pdf",
                         mime="application/pdf"
                     )
-                    st.success("PDF generado con éxito.")
+                    st.success("✅ PDF generado correctamente.")
                 except Exception as e:
-                    st.error(f"Error al construir PDF: {e}")
+                    st.error(f"Error al generar el documento: {e}")
 
     with col_txt:
-        informe_txt_raw = f"CLIENTE: {cliente}\nAUDITOR: {auditor}\n\n"
+        # Generación de la previsualización para el archivo de texto
+        informe_txt_raw = f"INFORME TÉCNICO - {cliente.upper()}\nAUDITOR: {auditor.upper()}\nFECHA: {fecha}\n\n"
         for k, v in dict_hallazgos.items():
-            informe_txt_raw += f">>> {k}\n{v}\n\n"
-        
+            informe_txt_raw += f">>> {k.upper()}\n{v}\n\n"
+        informe_txt_raw += f"CONCLUSIONES:\n{conclusion}\n\n'Juntos lo hacemos posible'"
+
         st.download_button(
             label="📥 DESCARGAR COMO TXT",
             data=informe_txt_raw,
@@ -188,6 +189,5 @@ with tab2:
             mime="text/plain"
         )
         
-
 
 
